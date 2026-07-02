@@ -282,3 +282,124 @@ S2 キーワード検索を実装しました。
 問題なく想定通りに実装してくれた
 
 ---
+
+## プロンプト 6
+
+**フェーズ**:S3対応
+
+**プロンプト本文**:
+
+```
+投稿者名フィールド拡張機能を作成する。
+
+    - 投稿フォームに任意のアバター色を選択できる項目を追加する
+    - アバター色は未選択でも投稿できる
+    - アバター色を選択した場合、投稿一覧と投稿詳細で投稿者名の横に色付きの丸を表示する
+    - sample 配下のテストは修正しない
+
+    以下の観点のテストを用意してから本機能の実装を行う。
+
+    - 投稿作成フォーム表示時に、投稿者名入力欄とアバター色選択欄が表示されること
+    - 投稿者名が空文字の場合、フォームを再表示しエラーを表示すること
+    - 投稿者名が空白のみの場合、フォームを再表示しエラーを表示すること
+    - 投稿者名が 31 文字以上の場合、フォームを再表示しエラーを表示すること
+    - アバター色が未選択でも投稿を保存できること
+    - アバター色を選択した場合、投稿と一緒に保存できること
+    - 許可されていないアバター色が送信された場合、フォームを再表示しエラーを表示すること
+    - 投稿一覧で、アバター色がある投稿は投稿者名の横に色付きの丸を表示できること
+    - 投稿詳細で、アバター色がある投稿は投稿者名の横に色付きの丸を表示できること
+    - 投稿一覧と投稿詳細で、投稿者名が HTML として解釈されずエスケープ表示されること
+    - Repository / Service / Controller のテストを追加または更新すること
+    - 最後に ./mvnw -B -Ph2 verify が成功すること
+```
+
+**結果**: 効いた
+
+```
+S3 投稿者名フィールド拡張を実装しました。
+
+  主な変更:
+
+  - Post に avatarColor を追加し、V3__post_avatar_color.sql で avatar_color 列と許可値制約を追加
+  - PostForm に avatarColor を追加し、blue/green/pink/yellow だけ許可
+  - 投稿フォームにアバター色のセレクトボックスを追加
+  - 投稿一覧・詳細で、アバター色がある場合に投稿者名の横へ色付き丸を表示
+  - 任意 CSS 値は使わず、保存トークンから固定 CSS クラスだけを出力
+  - Repository / Service / Controller テストを追加・更新
+  - sample 配下は未修正
+
+  検証:
+
+  ./mvnw -B -Ph2 -Dtest=PostRepositoryTest,PostServiceTest,PostControllerTest test
+  BUILD SUCCESS
+
+  ./mvnw -B -Ph2 verify
+  BUILD SUCCESS
+
+  Checkstyle 違反 0、SpotBugs 警告 0、JaCoCo coverage check 成功です。
+```
+
+**振り返り**:
+
+問題なく想定通りに実装してくれた（選択可能な色はこちらの指示がなくても、codexが自動で決めてくれた）
+
+---
+
+## プロンプト 7
+
+**フェーズ**:C2対応
+
+**プロンプト本文**:
+
+```
+投稿削除機能を作成する。
+
+    - 投稿は物理削除せず、deleted_at カラムを使って論理削除する
+    - 投稿一覧では、論理削除済みの投稿を表示しない
+    - 投稿詳細では、論理削除済みの投稿は 404 を返す
+    - 投稿詳細画面に削除ボタンを追加する
+    - DELETE /posts/{id} または POST /posts/{id}/delete で投稿を削除する
+    - 削除後は /posts にリダイレクトする
+    - 存在しない id の削除リクエストは 404 を返す
+    - sample 配下のテストは修正しない
+
+    以下の観点のテストを用意してから本機能の実装を行う。
+
+    - Repository で deleted_at が null の投稿だけを新着順で取得できること
+    - Repository で deleted_at が設定された投稿は検索対象から除外されること
+    - Service で投稿を物理削除せず deleted_at を設定できること
+    - Service で存在しない id を削除しようとした場合、PostNotFoundException を投げること
+    - GET /posts で論理削除済みの投稿が model.posts に含まれないこと
+    - GET /posts/{id} で論理削除済みの投稿は 404 を返すこと
+    - 投稿詳細画面に削除ボタンが表示されること
+    - 削除ボタン押下後、/posts にリダイレクトすること
+    - 存在しない id に削除リクエストを送った場合、404 を返すこと
+    - Flyway migration で posts.deleted_at カラムを追加すること
+    - 最後に ./mvnw -B -Ph2 verify が成功すること
+```
+
+**結果**: 効いた
+
+```
+  主な変更:
+
+  - posts.deleted_at 追加 migration: V4__post_deleted_at.sql
+  - Post に deletedAt と markDeleted(...) を追加
+  - 一覧・検索・詳細取得を deletedAt IS NULL の投稿だけに変更
+  - POST /posts/{id}/delete を追加
+  - 詳細画面に削除ボタンを追加
+  - Repository / Service / Controller テストを追加・更新
+  - Spring DI に対する SpotBugs 誤検知を config/spotbugs-exclude.xml で除外
+
+  検証:
+
+  - ./mvnw -B -Ph2 -Dtest=PostRepositoryTest,PostServiceTest,PostControllerTest test 成功
+  - ./mvnw -B -Ph2 verify 成功
+  - 全体: 64 tests, failures 0, Checkstyle 0, SpotBugs 0, JaCoCo OK
+```
+
+**振り返り**:
+
+問題なく想定通りに実装してくれた
+
+---
