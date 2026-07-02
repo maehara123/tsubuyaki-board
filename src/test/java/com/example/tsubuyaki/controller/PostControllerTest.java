@@ -323,7 +323,9 @@ class PostControllerTest {
                 .andExpect(content().string(containsString("いいね 3")))
                 .andExpect(content().string(containsString("<form action=\"/posts/1/likes\" method=\"post\">")))
                 .andExpect(content().string(containsString("like-toggle--on")))
-                .andExpect(content().string(containsString("<span class=\"like-toggle__text\">Like</span>")));
+                .andExpect(content().string(containsString("<span class=\"like-toggle__text\">Like</span>")))
+                .andExpect(content().string(containsString("<form action=\"/posts/1/delete\" method=\"post\">")))
+                .andExpect(content().string(containsString("<button class=\"post__delete-button\" type=\"submit\">削除</button>")));
     }
 
     @Test
@@ -365,6 +367,15 @@ class PostControllerTest {
         doThrow(new PostNotFoundException(999L)).when(postService).getDetail(999L, "127.0.0.1", null);
 
         mockMvc.perform(get("/posts/999"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("投稿詳細_論理削除済み投稿_404を返す")
+    void detail_whenPostDeleted_returns404() throws Exception {
+        doThrow(new PostNotFoundException(2L)).when(postService).getDetail(2L, "127.0.0.1", null);
+
+        mockMvc.perform(get("/posts/2"))
                 .andExpect(status().isNotFound());
     }
 
@@ -442,6 +453,25 @@ class PostControllerTest {
                             return request;
                         })
                         .header("User-Agent", "JUnit UA"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("投稿削除_存在する投稿_論理削除して一覧へリダイレクトする")
+    void delete_whenPostExists_deletesPostAndRedirectsToList() throws Exception {
+        mockMvc.perform(post("/posts/1/delete"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/posts"));
+
+        then(postService).should().delete(1L);
+    }
+
+    @Test
+    @DisplayName("投稿削除_存在しない投稿_404を返す")
+    void delete_whenPostDoesNotExist_returns404() throws Exception {
+        doThrow(new PostNotFoundException(999L)).when(postService).delete(999L);
+
+        mockMvc.perform(post("/posts/999/delete"))
                 .andExpect(status().isNotFound());
     }
 }

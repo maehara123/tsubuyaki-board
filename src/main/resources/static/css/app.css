@@ -110,6 +110,20 @@ h1 {
     background: #ca8a04;
 }
 
+.post__delete-button {
+    border: 1px solid #dc2626;
+    border-radius: 6px;
+    background: #fff;
+    color: #b91c1c;
+    cursor: pointer;
+    font-weight: 700;
+    padding: 0.45rem 0.8rem;
+}
+
+.post__delete-button:hover {
+    background: #fef2f2;
+}
+
 .post__created-at {
     display: block;
     color: var(--color-muted);

@@ -73,4 +73,14 @@ public class PostController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage(), e);
         }
     }
+
+    @PostMapping("/posts/{id}/delete")
+    public String delete(@PathVariable Long id) {
+        try {
+            postService.delete(id);
+            return "redirect:/posts";
+        } catch (PostNotFoundException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage(), e);
+        }
+    }
 }

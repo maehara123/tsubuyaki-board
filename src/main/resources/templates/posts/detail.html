@@ -40,6 +40,9 @@
                 </button>
             </form>
         </div>
+        <form th:action="@{/posts/{id}/delete(id=${post.id})}" method="post">
+            <button class="post__delete-button" type="submit">削除</button>
+        </form>
     </article>
 </main>
 </body>

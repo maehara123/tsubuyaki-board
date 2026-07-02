@@ -44,7 +44,7 @@ class PostServiceTest {
     @Test
     @DisplayName("投稿一覧_投稿がないとき_空リストを返す")
     void latest_whenNoPosts_returnsEmpty() {
-        given(postRepository.findTop50ByOrderByCreatedAtDesc()).willReturn(List.of());
+        given(postRepository.findTop50ByDeletedAtIsNullOrderByCreatedAtDesc()).willReturn(List.of());
 
         List<PostDto> actual = postService.latest();
 
@@ -57,7 +57,7 @@ class PostServiceTest {
         Post newerPost = new Post("alice", "新しい投稿", Instant.parse("2026-05-23T10:00:00Z"));
         Post olderPost = new Post("bob", "古い投稿", Instant.parse("2026-05-23T09:00:00Z"));
         List<Post> latestPosts = List.of(newerPost, olderPost);
-        given(postRepository.findTop50ByOrderByCreatedAtDesc()).willReturn(latestPosts);
+        given(postRepository.findTop50ByDeletedAtIsNullOrderByCreatedAtDesc()).willReturn(latestPosts);
 
         List<PostDto> actual = postService.latest();
 
@@ -72,7 +72,7 @@ class PostServiceTest {
     @DisplayName("投稿検索_q指定_本文部分一致検索の結果を返す")
     void search_whenQueryGiven_returnsBodySearchResults() {
         Post matchedPost = new Post("alice", "検索できる本文", Instant.parse("2026-05-23T10:00:00Z"));
-        given(postRepository.findTop50ByBodyContainingOrderByCreatedAtDesc("検索"))
+        given(postRepository.findTop50ByDeletedAtIsNullAndBodyContainingOrderByCreatedAtDesc("検索"))
                 .willReturn(List.of(matchedPost));
 
         List<PostDto> actual = postService.search("検索");
@@ -80,21 +80,21 @@ class PostServiceTest {
         assertThat(actual)
                 .extracting(PostDto::author, PostDto::body, PostDto::createdAt)
                 .containsExactly(tuple("alice", "検索できる本文", Instant.parse("2026-05-23T10:00:00Z")));
-        then(postRepository).should(never()).findTop50ByOrderByCreatedAtDesc();
+        then(postRepository).should(never()).findTop50ByDeletedAtIsNullOrderByCreatedAtDesc();
     }
 
     @Test
     @DisplayName("投稿検索_q未指定_最新50件を返す")
     void search_whenQueryIsNull_returnsLatestPosts() {
         Post post = new Post("alice", "最新投稿", Instant.parse("2026-05-23T10:00:00Z"));
-        given(postRepository.findTop50ByOrderByCreatedAtDesc()).willReturn(List.of(post));
+        given(postRepository.findTop50ByDeletedAtIsNullOrderByCreatedAtDesc()).willReturn(List.of(post));
 
         List<PostDto> actual = postService.search(null);
 
         assertThat(actual)
                 .extracting(PostDto::body)
                 .containsExactly("最新投稿");
-        then(postRepository).should(never()).findTop50ByBodyContainingOrderByCreatedAtDesc(
+        then(postRepository).should(never()).findTop50ByDeletedAtIsNullAndBodyContainingOrderByCreatedAtDesc(
                 org.mockito.ArgumentMatchers.anyString());
     }
 
@@ -102,14 +102,14 @@ class PostServiceTest {
     @DisplayName("投稿検索_q空白のみ_最新50件を返す")
     void search_whenQueryIsBlank_returnsLatestPosts() {
         Post post = new Post("alice", "最新投稿", Instant.parse("2026-05-23T10:00:00Z"));
-        given(postRepository.findTop50ByOrderByCreatedAtDesc()).willReturn(List.of(post));
+        given(postRepository.findTop50ByDeletedAtIsNullOrderByCreatedAtDesc()).willReturn(List.of(post));
 
         List<PostDto> actual = postService.search("   ");
 
         assertThat(actual)
                 .extracting(PostDto::body)
                 .containsExactly("最新投稿");
-        then(postRepository).should(never()).findTop50ByBodyContainingOrderByCreatedAtDesc(
+        then(postRepository).should(never()).findTop50ByDeletedAtIsNullAndBodyContainingOrderByCreatedAtDesc(
                 org.mockito.ArgumentMatchers.anyString());
     }
 
@@ -155,7 +155,7 @@ class PostServiceTest {
     @DisplayName("投稿詳細_存在する投稿_投稿DTOを返す")
     void findById_whenPostExists_returnsPostDto() {
         Post post = new Post("alice", "詳細本文", Instant.parse("2026-05-23T10:00:00Z"));
-        given(postRepository.findById(1L)).willReturn(Optional.of(post));
+        given(postRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(post));
 
         Optional<PostDto> actual = postService.findById(1L);
 
@@ -171,7 +171,7 @@ class PostServiceTest {
     @Test
     @DisplayName("投稿詳細_存在しない投稿_空を返す")
     void findById_whenPostDoesNotExist_returnsEmpty() {
-        given(postRepository.findById(999L)).willReturn(Optional.empty());
+        given(postRepository.findByIdAndDeletedAtIsNull(999L)).willReturn(Optional.empty());
 
         Optional<PostDto> actual = postService.findById(999L);
 
@@ -183,7 +183,7 @@ class PostServiceTest {
     void getDetail_whenPostExists_returnsPostDetail() {
         Post post = new Post("alice", "詳細本文", Instant.parse("2026-05-23T10:00:00Z"));
         PostLike like = new PostLike(post, "abcd1234", Instant.parse("2026-05-23T11:00:00Z"));
-        given(postRepository.findById(1L)).willReturn(Optional.of(post));
+        given(postRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(post));
         given(clientHashGenerator.generate("203.0.113.10", "JUnit UA")).willReturn("abcd1234");
         given(postLikeRepository.countByPostId(1L)).willReturn(3L);
         given(postLikeRepository.findByPostIdAndClientHash(1L, "abcd1234")).willReturn(Optional.of(like));
@@ -200,7 +200,7 @@ class PostServiceTest {
     @Test
     @DisplayName("投稿詳細_存在しない投稿_例外を投げる")
     void getDetail_whenPostDoesNotExist_throwsException() {
-        given(postRepository.findById(999L)).willReturn(Optional.empty());
+        given(postRepository.findByIdAndDeletedAtIsNull(999L)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> postService.getDetail(999L, "203.0.113.10", "JUnit UA"))
                 .isInstanceOf(PostNotFoundException.class)
@@ -257,6 +257,30 @@ class PostServiceTest {
         given(postRepository.findById(999L)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> postService.toggleLike(999L, "abcd1234"))
+                .isInstanceOf(PostNotFoundException.class)
+                .hasMessage("Post not found: 999");
+    }
+
+    @Test
+    @DisplayName("投稿削除_存在する投稿_物理削除せずdeletedAtを設定する")
+    void delete_whenPostExists_marksPostDeletedWithoutPhysicalDelete() {
+        Post post = new Post("alice", "削除する投稿", Instant.parse("2026-05-23T10:00:00Z"));
+        given(postRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(post));
+        Instant before = Instant.now();
+
+        postService.delete(1L);
+
+        Instant after = Instant.now();
+        assertThat(post.getDeletedAt()).isBetween(before, after);
+        then(postRepository).should(never()).delete(org.mockito.ArgumentMatchers.any(Post.class));
+    }
+
+    @Test
+    @DisplayName("投稿削除_存在しない投稿_PostNotFoundExceptionを投げる")
+    void delete_whenPostDoesNotExist_throwsException() {
+        given(postRepository.findByIdAndDeletedAtIsNull(999L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> postService.delete(999L))
                 .isInstanceOf(PostNotFoundException.class)
                 .hasMessage("Post not found: 999");
     }

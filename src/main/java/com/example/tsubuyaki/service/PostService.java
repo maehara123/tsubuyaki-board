@@ -32,7 +32,7 @@ public class PostService {
     }
 
     public List<PostDto> latest() {
-        List<Post> posts = repository.findTop50ByOrderByCreatedAtDesc();
+        List<Post> posts = repository.findTop50ByDeletedAtIsNullOrderByCreatedAtDesc();
         return toDtoList(posts);
     }
 
@@ -40,7 +40,7 @@ public class PostService {
         if (query == null || query.isBlank()) {
             return latest();
         }
-        List<Post> posts = repository.findTop50ByBodyContainingOrderByCreatedAtDesc(query);
+        List<Post> posts = repository.findTop50ByDeletedAtIsNullAndBodyContainingOrderByCreatedAtDesc(query);
         return toDtoList(posts);
     }
 
@@ -67,7 +67,7 @@ public class PostService {
     }
 
     public Optional<PostDto> findById(Long id) {
-        return repository.findById(id).map(PostDto::from);
+        return repository.findByIdAndDeletedAtIsNull(id).map(PostDto::from);
     }
 
     public PostDetailDto getDetail(Long postId, String ipAddress, String userAgent) {
@@ -75,7 +75,7 @@ public class PostService {
     }
 
     private PostDetailDto getDetailByClientHash(Long postId, String clientHash) {
-        Post post = repository.findById(postId)
+        Post post = repository.findByIdAndDeletedAtIsNull(postId)
                 .orElseThrow(() -> new PostNotFoundException(postId));
         return new PostDetailDto(
                 PostDto.from(post),
@@ -106,5 +106,12 @@ public class PostService {
 
     public boolean hasLiked(Long postId, String clientHash) {
         return likeRepository.findByPostIdAndClientHash(postId, clientHash).isPresent();
+    }
+
+    @Transactional
+    public void delete(Long postId) {
+        Post post = repository.findByIdAndDeletedAtIsNull(postId)
+                .orElseThrow(() -> new PostNotFoundException(postId));
+        post.markDeleted(Instant.now());
     }
 }
