@@ -129,7 +129,26 @@ class PostServiceTest {
         Post saved = captor.getValue();
         assertThat(saved.getAuthor()).isEqualTo("alice");
         assertThat(saved.getBody()).isEqualTo("登録した投稿");
+        assertThat(saved.getAvatarColor()).isNull();
         assertThat(saved.getCreatedAt()).isBetween(before, after);
+    }
+
+    @Test
+    @DisplayName("投稿作成_avatarColor選択_投稿者本文アバター色投稿日を保存する")
+    void create_whenAvatarColorSelected_savesPostWithAvatarColor() {
+        PostForm form = new PostForm();
+        form.setAuthor("alice");
+        form.setBody("登録した投稿");
+        form.setAvatarColor("blue");
+
+        postService.create(form);
+
+        ArgumentCaptor<Post> captor = ArgumentCaptor.forClass(Post.class);
+        then(postRepository).should().save(captor.capture());
+        Post saved = captor.getValue();
+        assertThat(saved.getAuthor()).isEqualTo("alice");
+        assertThat(saved.getBody()).isEqualTo("登録した投稿");
+        assertThat(saved.getAvatarColor()).isEqualTo("blue");
     }
 
     @Test
@@ -144,6 +163,7 @@ class PostServiceTest {
             assertThat(dto.id()).isEqualTo(post.getId());
             assertThat(dto.author()).isEqualTo("alice");
             assertThat(dto.body()).isEqualTo("詳細本文");
+            assertThat(dto.avatarColor()).isNull();
             assertThat(dto.createdAt()).isEqualTo(Instant.parse("2026-05-23T10:00:00Z"));
         });
     }

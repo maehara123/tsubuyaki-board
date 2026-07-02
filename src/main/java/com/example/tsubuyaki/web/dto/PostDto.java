@@ -8,9 +8,19 @@ public record PostDto(
         Long id,
         String author,
         String body,
-        Instant createdAt) {
+        Instant createdAt,
+        String avatarColor) {
+
+    public PostDto(Long id, String author, String body, Instant createdAt) {
+        this(id, author, body, createdAt, null);
+    }
 
     public static PostDto from(Post post) {
-        return new PostDto(post.getId(), post.getAuthor(), post.getBody(), post.getCreatedAt());
+        return new PostDto(
+                post.getId(),
+                post.getAuthor(),
+                post.getBody(),
+                post.getCreatedAt(),
+                post.getAvatarColor());
     }
 }

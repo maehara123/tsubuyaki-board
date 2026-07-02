@@ -47,6 +47,20 @@ class PostRepositoryTest {
     }
 
     @Test
+    @DisplayName("投稿作成_avatarColorあり_投稿と一緒に保存できる")
+    void save_whenAvatarColorSelected_persistsAvatarColor() {
+        Post post = postRepository.saveAndFlush(new Post(
+                "alice",
+                "アバター色つき投稿",
+                Instant.parse("2026-05-23T10:00:00Z"),
+                "blue"));
+
+        Post actual = postRepository.findById(post.getId()).orElseThrow();
+
+        assertThat(actual.getAvatarColor()).isEqualTo("blue");
+    }
+
+    @Test
     @DisplayName("投稿検索_本文にキーワードを含む投稿だけを新着順で返す")
     void findTop50ByBodyContainingOrderByCreatedAtDesc_whenBodyContainsKeyword_returnsMatchingPosts() {
         Post olderMatchedPost = new Post("alice", "検索できる本文", Instant.parse("2026-05-23T09:00:00Z"));

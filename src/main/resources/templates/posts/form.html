@@ -20,6 +20,17 @@
             <p class="error" th:if="${#fields.hasErrors('author')}" th:errors="*{author}">エラー</p>
         </div>
         <div>
+            <label for="avatarColor">アバター色</label>
+            <select id="avatarColor" th:field="*{avatarColor}">
+                <option value="">未選択</option>
+                <option value="blue">青</option>
+                <option value="green">緑</option>
+                <option value="pink">ピンク</option>
+                <option value="yellow">黄</option>
+            </select>
+            <p class="error" th:if="${#fields.hasErrors('avatarColor')}" th:errors="*{avatarColor}">エラー</p>
+        </div>
+        <div>
             <label for="body">本文 (280 文字まで)</label>
             <textarea id="body" th:field="*{body}" maxlength="280" rows="4" required></textarea>
             <p class="error" th:if="${#fields.hasErrors('body')}" th:errors="*{body}">エラー</p>

@@ -55,7 +55,15 @@ public class PostService {
 
     @Transactional
     public void create(PostForm form) {
-        repository.save(new Post(form.getAuthor(), form.getBody(), Instant.now()));
+        repository.save(new Post(
+                form.getAuthor(),
+                form.getBody(),
+                Instant.now(),
+                normalizedAvatarColor(form.getAvatarColor())));
+    }
+
+    private String normalizedAvatarColor(String avatarColor) {
+        return avatarColor == null || avatarColor.isBlank() ? null : avatarColor;
     }
 
     public Optional<PostDto> findById(Long id) {

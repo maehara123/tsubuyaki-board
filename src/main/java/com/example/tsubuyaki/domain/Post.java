@@ -26,6 +26,9 @@ public class Post {
     @Column(name = "body", length = 280, nullable = false)
     private String body;
 
+    @Column(name = "avatar_color", length = 20)
+    private String avatarColor;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -34,9 +37,14 @@ public class Post {
     }
 
     public Post(String author, String body, Instant createdAt) {
+        this(author, body, createdAt, null);
+    }
+
+    public Post(String author, String body, Instant createdAt, String avatarColor) {
         this.author = author;
         this.body = body;
         this.createdAt = createdAt;
+        this.avatarColor = avatarColor;
     }
 
     public Long getId() {
@@ -49,6 +57,10 @@ public class Post {
 
     public String getBody() {
         return body;
+    }
+
+    public String getAvatarColor() {
+        return avatarColor;
     }
 
     public Instant getCreatedAt() {

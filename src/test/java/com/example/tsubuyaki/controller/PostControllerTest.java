@@ -46,7 +46,7 @@ class PostControllerTest {
     @Test
     @DisplayName("投稿一覧_最新投稿があるとき_投稿を新着順でビューに渡す")
     void list_whenLatestPostsExist_passesPostsToViewInNewestOrder() throws Exception {
-        PostDto newerPost = new PostDto(1L, "alice", "新しい投稿", Instant.parse("2026-05-23T10:00:00Z"));
+        PostDto newerPost = new PostDto(1L, "alice", "新しい投稿", Instant.parse("2026-05-23T10:00:00Z"), "blue");
         PostDto olderPost = new PostDto(2L, "bob", "古い投稿", Instant.parse("2026-05-23T09:00:00Z"));
         given(postService.search(null)).willReturn(List.of(newerPost, olderPost));
 
@@ -54,6 +54,7 @@ class PostControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("posts/list"))
                 .andExpect(model().attribute("posts", contains(newerPost, olderPost)))
+                .andExpect(content().string(containsString("post__avatar--blue")))
                 .andExpect(content().string(containsString("新しい投稿")))
                 .andExpect(content().string(containsString("古い投稿")));
     }
@@ -159,6 +160,9 @@ class PostControllerTest {
                 .andExpect(view().name("posts/form"))
                 .andExpect(model().attribute("postForm", instanceOf(PostForm.class)))
                 .andExpect(content().string(containsString("<form action=\"/posts\" method=\"post\">")))
+                .andExpect(content().string(containsString("id=\"author\"")))
+                .andExpect(content().string(containsString("id=\"avatarColor\"")))
+                .andExpect(content().string(containsString("<option value=\"blue\">青</option>")))
                 .andExpect(content().string(containsString("<button type=\"submit\">投稿</button>")))
                 .andExpect(content().string(containsString("新規投稿")));
     }
@@ -201,6 +205,21 @@ class PostControllerTest {
                 .andExpect(view().name("posts/form"))
                 .andExpect(model().attributeHasFieldErrors("postForm", "author"))
                 .andExpect(content().string(containsString("投稿者名は 30 文字以内で入力してください")));
+
+        verifyNoInteractions(postService);
+    }
+
+    @Test
+    @DisplayName("投稿作成_avatarColor不正値_フォームを再表示しエラーを表示する")
+    void create_whenAvatarColorIsNotAllowed_returnsFormWithError() throws Exception {
+        mockMvc.perform(post("/posts")
+                        .param("author", "alice")
+                        .param("body", "本文")
+                        .param("avatarColor", "background:red"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("posts/form"))
+                .andExpect(model().attributeHasFieldErrors("postForm", "avatarColor"))
+                .andExpect(content().string(containsString("アバター色は選択肢から選んでください")));
 
         verifyNoInteractions(postService);
     }
@@ -256,18 +275,33 @@ class PostControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/posts"));
 
-        then(postService).should().create(assertThatForm("alice", "登録した投稿"));
+        then(postService).should().create(assertThatForm("alice", "登録した投稿", null));
     }
 
-    private PostForm assertThatForm(String author, String body) {
+    @Test
+    @DisplayName("投稿作成_avatarColor選択_投稿を保存して一覧へリダイレクトする")
+    void create_whenAvatarColorSelected_savesPostWithAvatarColorAndRedirectsToList() throws Exception {
+        mockMvc.perform(post("/posts")
+                        .param("author", "alice")
+                        .param("body", "登録した投稿")
+                        .param("avatarColor", "green"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/posts"));
+
+        then(postService).should().create(assertThatForm("alice", "登録した投稿", "green"));
+    }
+
+    private PostForm assertThatForm(String author, String body, String avatarColor) {
         return org.mockito.ArgumentMatchers.argThat(form ->
-                author.equals(form.getAuthor()) && body.equals(form.getBody()));
+                author.equals(form.getAuthor())
+                        && body.equals(form.getBody())
+                        && java.util.Objects.equals(avatarColor, form.getAvatarColor()));
     }
 
     @Test
     @DisplayName("投稿詳細_存在する投稿_詳細画面を表示しmodelに投稿を積む")
     void detail_whenPostExists_displaysDetailViewWithPost() throws Exception {
-        PostDto post = new PostDto(1L, "alice", "詳細本文", Instant.parse("2026-05-23T10:00:00Z"));
+        PostDto post = new PostDto(1L, "alice", "詳細本文", Instant.parse("2026-05-23T10:00:00Z"), "green");
         given(postService.getDetail(1L, "203.0.113.10", "JUnit UA"))
                 .willReturn(new PostDetailDto(post, 3L, true));
 
@@ -282,6 +316,7 @@ class PostControllerTest {
                 .andExpect(model().attribute("post", post))
                 .andExpect(model().attribute("likeCount", 3L))
                 .andExpect(model().attribute("liked", true))
+                .andExpect(content().string(containsString("post__avatar--green")))
                 .andExpect(content().string(containsString("alice")))
                 .andExpect(content().string(containsString("詳細本文")))
                 .andExpect(content().string(containsString("2026-05-23 19:00")))
@@ -349,6 +384,30 @@ class PostControllerTest {
     void detail_whenBodyContainsHtml_escapesBody() throws Exception {
         PostDto post = new PostDto(1L, "alice", "<script>alert('xss')</script>",
                 Instant.parse("2026-05-23T10:00:00Z"));
+        given(postService.getDetail(1L, "127.0.0.1", null)).willReturn(new PostDetailDto(post, 0L, false));
+
+        mockMvc.perform(get("/posts/1"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;")));
+    }
+
+    @Test
+    @DisplayName("投稿一覧_投稿者名にHTMLが含まれるとき_エスケープ表示する")
+    void list_whenAuthorContainsHtml_escapesAuthor() throws Exception {
+        PostDto post = new PostDto(1L, "<script>alert('xss')</script>", "本文",
+                Instant.parse("2026-05-23T10:00:00Z"), "blue");
+        given(postService.search(null)).willReturn(List.of(post));
+
+        mockMvc.perform(get("/posts"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;")));
+    }
+
+    @Test
+    @DisplayName("投稿詳細_投稿者名にHTMLが含まれるとき_エスケープ表示する")
+    void detail_whenAuthorContainsHtml_escapesAuthor() throws Exception {
+        PostDto post = new PostDto(1L, "<script>alert('xss')</script>", "本文",
+                Instant.parse("2026-05-23T10:00:00Z"), "blue");
         given(postService.getDetail(1L, "127.0.0.1", null)).willReturn(new PostDetailDto(post, 0L, false));
 
         mockMvc.perform(get("/posts/1"))

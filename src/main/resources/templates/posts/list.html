@@ -24,6 +24,10 @@
         <p th:if="${#lists.isEmpty(posts)}">まだ投稿はありません。最初の一言を投稿しよう。</p>
         <article class="post" th:each="post : ${posts}">
             <header>
+                <span th:if="${post.avatarColor}"
+                      class="post__avatar"
+                      th:classappend="| post__avatar--${post.avatarColor}|"
+                      aria-hidden="true"></span>
                 <span class="post__author" th:text="${post.author}">投稿者</span>
             </header>
             <p class="post__body" th:text="${post.body}">本文</p>

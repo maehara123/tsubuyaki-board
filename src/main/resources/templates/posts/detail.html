@@ -15,6 +15,10 @@
 
     <article class="post">
         <header>
+            <span th:if="${post.avatarColor}"
+                  class="post__avatar"
+                  th:classappend="| post__avatar--${post.avatarColor}|"
+                  aria-hidden="true"></span>
             <span class="post__author" th:text="${post.author}">投稿者</span>
         </header>
         <p class="post__body" th:text="${post.body}">本文</p>
